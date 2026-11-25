@@ -1,0 +1,73 @@
+{
+  "trained_at": "2026-11-18T14:14:23",
+  "data": {
+    "labeled_jobs": 450,
+    "labeled_relevant": 150,
+    "used_after_balancing": 300,
+    "relevant": 150,
+    "not_relevant": 150
+  },
+  "features": "job title, bag-of-words (CountVectorizer binary, max_features=500, stop words EN+DE)",
+  "model": "MLPClassifier(hidden_layer_sizes=(100, 10), max_iter=100, random_state=1)",
+  "balancing": "as in the course: groupby().sample() with the size of the smaller class (150 per class)",
+  "extra_check_unused_not_relevant": {
+    "jobs": 150,
+    "wrongly_recommended": 71
+  },
+  "test_set": {
+    "jobs": 60,
+    "relevant": 30
+  },
+  "test_metrics": {
+    "accuracy": 0.667,
+    "precision_relevant": 0.625,
+    "recall_relevant": 0.833,
+    "f1_relevant": 0.714
+  },
+  "baselines_on_test": {
+    "always \"not relevant\"": {
+      "accuracy": 0.5,
+      "precision": 0.0,
+      "recall": 0.0,
+      "F1": 0.0
+    },
+    "keyword rule on title": {
+      "accuracy": 0.63,
+      "precision": 0.75,
+      "recall": 0.4,
+      "F1": 0.52
+    },
+    "MLP model": {
+      "accuracy": 0.67,
+      "precision": 0.62,
+      "recall": 0.83,
+      "F1": 0.71
+    }
+  },
+  "cv_max_iter": [
+    {
+      "max_iter": 5,
+      "mean F1 (validation)": 0.651
+    },
+    {
+      "max_iter": 10,
+      "mean F1 (validation)": 0.64
+    },
+    {
+      "max_iter": 20,
+      "mean F1 (validation)": 0.644
+    },
+    {
+      "max_iter": 30,
+      "mean F1 (validation)": 0.614
+    },
+    {
+      "max_iter": 50,
+      "mean F1 (validation)": 0.64
+    },
+    {
+      "max_iter": 100,
+      "mean F1 (validation)": 0.656
+    }
+  ]
+}

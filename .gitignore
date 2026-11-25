@@ -1,0 +1,32 @@
+# Python environment and caches
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+
+# macOS / editors
+.DS_Store
+.Rhistory
+
+# Robot Framework and Firefox driver logs (created on every run)
+results/geckodriver-*.log
+results/output.xml
+results/selenium-screenshot-*.png
+
+# Files created by the robots on every run
+data/jobs_new.csv
+data/predictions.csv
+data/jobs_labeled.csv
+
+# Personal files and archives
+data/relevant_jobs.csv
+*.zip
+
+# Not published: job ad texts belong to the employers and karriere.at
+data/jobs_raw.csv
+
+# Robot Framework logs (contain local paths and scraped texts)
+results/log.html
+results/report.html
+
+# Course submission documentation (contains student ID)
+documentation/

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Job labeling</title>
+<style>
+  :root {
+    --bg: #f5f5f2; --card: #ffffff; --text: #1f2328; --muted: #6b6f76; --line: #e3e3de;
+    --pos: #1f7a4d; --pos-bg: #e3f4ea; --neg: #b3261e; --neg-bg: #fbe7e5;
+    --uns: #8a6d00; --uns-bg: #fdf3d0; --accent: #2b59c3;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         background: var(--bg); color: var(--text); }
+  header { position: sticky; top: 0; z-index: 5; background: var(--card); border-bottom: 1px solid var(--line);
+           padding: 10px 20px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  .progress { flex: 1; min-width: 160px; height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+  .progress div { height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+  .stats { display: flex; gap: 12px; font-size: 13px; color: var(--muted); }
+  .stats b { color: var(--text); }
+  .stats .p b { color: var(--pos); } .stats .n b { color: var(--neg); } .stats .u b { color: var(--uns); }
+  .linkbtn { background: none; border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px;
+             cursor: pointer; font: inherit; font-size: 13px; color: var(--text); }
+  main { max-width: 920px; margin: 20px auto 190px; padding: 0 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 22px 26px; }
+  .meta { display: flex; gap: 8px 14px; flex-wrap: wrap; align-items: center; font-size: 13px; color: var(--muted); }
+  .tag { background: #eef1f8; color: var(--accent); border-radius: 4px; padding: 1px 8px; font-weight: 600; }
+  .meta a { color: var(--accent); font-weight: 600; text-decoration: none; }
+  .title { font-size: 22px; line-height: 1.3; margin: 10px 0 4px; }
+  .company { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+  .current { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 4px; padding: 2px 8px; margin-left: 4px; }
+  .current.l1 { background: var(--pos-bg); color: var(--pos); }
+  .current.l0 { background: var(--neg-bg); color: var(--neg); }
+  .current.lq { background: var(--uns-bg); color: var(--uns); }
+  .legend { font-size: 12px; color: var(--muted); margin: 10px 0 12px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .desc { white-space: pre-wrap; border-top: 1px solid var(--line); padding-top: 14px; }
+  mark { border-radius: 3px; padding: 0 2px; color: inherit; }
+  mark.sen { background: #ffd9d4; } mark.jun { background: #c9efd8; } mark.skl { background: #d9e4ff; }
+  mark.sal { background: #fff0a8; } mark.con { background: #ffe1bf; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--line);
+         padding: 12px 20px 14px; box-shadow: 0 -4px 14px rgba(0,0,0,.05); }
+  .bar-inner { max-width: 920px; margin: 0 auto; }
+  .row { display: flex; gap: 10px; align-items: stretch; }
+  .row + .row { margin-top: 10px; align-items: center; }
+  .btn { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 12px 14px;
+         font: inherit; font-weight: 600; cursor: pointer; color: var(--text); }
+  .btn kbd { font: 11px ui-monospace, monospace; border: 1px solid currentColor; border-radius: 3px;
+             padding: 0 4px; margin-left: 6px; opacity: .6; }
+  .btn.big { flex: 1; font-size: 16px; padding: 14px; }
+  .btn.pos { background: var(--pos); border-color: var(--pos); color: #fff; }
+  .btn.neg { background: var(--neg); border-color: var(--neg); color: #fff; }
+  .btn.uns { background: var(--uns-bg); border-color: #ecd98a; color: var(--uns); flex: .55; }
+  .btn.active { outline: 3px solid #1f2328; outline-offset: 2px; }
+  .btn:active { transform: translateY(1px); }
+  .chip { border: 1px solid #f0c4bf; background: var(--neg-bg); color: var(--neg); border-radius: 16px;
+          padding: 5px 12px; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; flex: 1; }
+  .chips span { font-size: 12px; color: var(--muted); }
+  #note { flex: 0 0 240px; height: 32px; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font: inherit; font-size: 13px; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 8px; text-align: center; }
+  .drawer { position: fixed; top: 52px; right: 0; bottom: 0; width: 380px; background: var(--card);
+            border-left: 1px solid var(--line); padding: 18px 22px; overflow: auto; z-index: 4;
+            transform: translateX(100%); transition: transform .2s; font-size: 14px; }
+  .drawer.open { transform: none; }
+  .drawer h2 { font-size: 15px; margin: 14px 0 6px; } .drawer h2:first-child { margin-top: 0; }
+  .drawer ul { padding-left: 18px; margin: 4px 0; }
+  .toast { position: fixed; top: 64px; left: 50%; transform: translateX(-50%); background: #1f2328; color: #fff;
+           padding: 8px 16px; border-radius: 6px; font-size: 14px; opacity: 0; transition: opacity .2s; z-index: 9; }
+  .toast.show { opacity: 1; }
+  .done { text-align: center; padding: 50px 20px; }
+  .done h2 { font-size: 22px; } code { background: #f0f0ec; padding: 2px 6px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Job labeling</h1>
+  <div class="progress"><div id="progress"></div></div>
+  <div class="stats">
+    <span><b id="s-done">0</b> / <span id="s-total">0</span> labeled</span>
+    <span class="p">relevant <b id="s-pos">0</b></span>
+    <span class="n">not relevant <b id="s-neg">0</b></span>
+    <span class="u">unsure <b id="s-uns">0</b></span>
+    <span>share relevant <b id="s-share">-</b></span>
+  </div>
+  <button class="linkbtn" id="criteria-btn">Criteria</button>
+</header>
+
+<aside class="drawer" id="drawer"><div id="criteria">No criteria file (labeling/criteria.md).</div></aside>
+<div class="toast" id="toast"></div>
+
+<main>
+  <div class="card" id="card">Loading…</div>
+</main>
+
+<div class="bar" id="bar">
+  <div class="bar-inner">
+    <div class="row">
+      <button class="btn" id="back" title="Previous job">← Back<kbd>←</kbd></button>
+      <button class="btn big neg" data-label="0">✗ Not relevant<kbd>0</kbd></button>
+      <button class="btn big uns" data-label="?">? Unsure<kbd>U</kbd></button>
+      <button class="btn big pos" data-label="1">✓ Relevant<kbd>1</kbd></button>
+      <button class="btn" id="skip" title="Decide later">Skip →<kbd>→</kbd></button>
+    </div>
+    <div class="row">
+      <div class="chips">
+        <span>Not relevant because:</span>
+        <button class="chip" data-reason="too senior">too senior</button>
+        <button class="chip" data-reason="wrong field">wrong field</button>
+        <button class="chip" data-reason="too technical / dev role">dev role</button>
+        <button class="chip" data-reason="internship / part-time">internship / part-time</button>
+        <button class="chip" data-reason="language / location">language / location</button>
+      </div>
+      <input id="note" placeholder="Note (optional) - press N">
+    </div>
+    <div class="hint">One click or key saves the label and opens the next job. Labels are written to data/labels.csv immediately.</div>
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------- state
+let jobs = [];        // ordered queue (server sorts by hash of job_id)
+let labels = {};      // job_id -> {label, note, labeled_at}
+let idx = 0;          // index of the job on screen
+const visited = [];   // job_ids visited, for "Back" (ids, because indices shift when new jobs arrive)
+
+// ---------------------------------------------------------------- highlighting
+// One combined regex, so a later pattern never matches inside an inserted <mark>.
+// Order matters: the first group that matches decides the color.
+const PATTERNS = [
+  ["sen", String.raw`\b(?:senior|sr\.|lead|teamlead\w*|teamleit\w*|leitung|leiter(?:in)?|head of|principal)\b|(?:mind(?:estens|\.)?\s*)?\b\d+\s*(?:\+|-\s*\d+|bis\s*\d+)?\s*(?:jahre?n?|years?)\b(?=[^.\n]{0,40}(?:erfahrung|experience))`],
+  ["jun", String.raw`\b(?:junior|jr\.|trainee\w*|graduate\w*|absolvent\w*|berufseinst\w*|berufsanf\w*|einsteiger\w*|entry[- ]level|young professional\w*)\b`],
+  ["con", String.raw`\b(?:praktik\w*|internship\w*|werkstudent\w*|teilzeit\w*|part[- ]time|geringfügig|karenzvertretung|befristet\w*)`],
+  ["sal", String.raw`(?:€|\beur\b)\s?[\d.,]+(?:\s?[-–]\s?[\d.,]+)?|\b\d[\d.,]{3,}\s?(?:€|eur\b)|\bbrutto\w*|\bkollektivvertrag\w*`],
+  ["skl", String.raw`\b(?:sql|python|power ?bi|tableau|qlik\w*|excel|sap|etl|dbt|databricks|snowflake|spark|azure|aws|gcp|dax|vba|machine learning|deep learning|llms?|genai|ki|ai|data warehouse\w*|dwh|statisti\w*)\b`],
+];
+const HL = new RegExp(PATTERNS.map(([, p]) => `(${p})`).join("|"), "gi");
+
+function esc(s) {
+  return (s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+function highlight(text) {
+  return esc(text).replace(HL, (...m) => {
+    const g = m.slice(1, PATTERNS.length + 1).findIndex(x => x !== undefined);
+    return `<mark class="${PATTERNS[g][0]}">${m[0]}</mark>`;
+  });
+}
+
+// ---------------------------------------------------------------- data
+async function fetchJobs() {
+  const r = await fetch("/api/jobs");
+  return r.json();
+}
+function apply(data) {
+  const currentId = idx >= 0 && jobs[idx] ? jobs[idx].job_id : null;
+  jobs = data.jobs;
+  labels = data.labels;
+  // keep the same job on screen when new jobs from the robot are inserted into the queue
+  const keep = currentId ? jobs.findIndex(j => j.job_id === currentId) : -1;
+  idx = keep >= 0 ? keep : nextUnlabeled(-1);
+}
+
+function nextUnlabeled(from) {
+  for (let k = 1; k <= jobs.length; k++) {
+    const i = (from + k) % jobs.length;
+    if (!labels[jobs[i].job_id]) return i;
+  }
+  return -1; // everything labeled
+}
+
+async function saveLabel(label, note) {
+  if (idx < 0 || !jobs[idx]) return;
+  const id = jobs[idx].job_id;
+  const before = labels[id];
+  labels[id] = { job_id: id, label, note }; // optimistic update: the next job shows instantly
+  goTo(nextUnlabeled(idx), true);
+  try {
+    const r = await fetch("/api/label", { method: "POST", headers: { "Content-Type": "application/json" },
+                                          body: JSON.stringify({ job_id: id, label, note }) });
+    if (!r.ok) throw new Error((await r.json()).error || r.status);
+    labels = (await r.json()).labels;
+    renderStats();
+  } catch (e) {
+    if (before) labels[id] = before; else delete labels[id];
+    renderStats();
+    toast("Not saved - is label_app.py still running? (" + e.message + ")");
+  }
+}
+
+// ---------------------------------------------------------------- navigation
+function goTo(i, remember) {
+  if (remember && idx >= 0 && jobs[idx]) visited.push(jobs[idx].job_id);
+  idx = i;
+  render();
+  window.scrollTo(0, 0);
+}
+function back() {
+  while (visited.length) {
+    const id = visited.pop();
+    const i = jobs.findIndex(j => j.job_id === id);
+    if (i >= 0) { goTo(i, false); return; }
+  }
+  toast("Nothing to go back to.");
+}
+function skip() {
+  if (idx < 0) return;
+  const n = nextUnlabeled(idx);
+  if (n === idx) { toast("This is the only unlabeled job left."); return; }
+  goTo(n === -1 ? (idx + 1) % jobs.length : n, true);
+}
+
+// ---------------------------------------------------------------- rendering
+function renderStats() {
+  const vals = Object.values(labels).filter(l => jobs.some(j => j.job_id === l.job_id));
+  const pos = vals.filter(l => l.label === "1").length;
+  const neg = vals.filter(l => l.label === "0").length;
+  const uns = vals.filter(l => l.label === "?").length;
+  const done = pos + neg + uns;
+  document.getElementById("s-done").textContent = done;
+  document.getElementById("s-total").textContent = jobs.length;
+  document.getElementById("s-pos").textContent = pos;
+  document.getElementById("s-neg").textContent = neg;
+  document.getElementById("s-uns").textContent = uns;
+  document.getElementById("s-share").textContent = pos + neg ? Math.round(100 * pos / (pos + neg)) + "%" : "-";
+  document.getElementById("progress").style.width = (jobs.length ? 100 * done / jobs.length : 0) + "%";
+}
+
+const TYPES = { FULL_TIME: "Full-time", PART_TIME: "Part-time", INTERN: "Internship", TEMPORARY: "Temporary",
+                CONTRACTOR: "Contractor", OTHER: "Other" };
+
+function render() {
+  renderStats();
+  const card = document.getElementById("card");
+  const bar = document.getElementById("bar");
+  const note = document.getElementById("note");
+  document.querySelectorAll("[data-label]").forEach(b => b.classList.remove("active"));
+
+  if (!jobs.length) { card.innerHTML = "No jobs in data/jobs_raw.csv yet."; bar.style.display = "none"; return; }
+  if (idx < 0) {
+    bar.style.display = "none";
+    card.innerHTML = `<div class="done"><h2>All ${jobs.length} jobs are labeled</h2>
+      <p>New jobs from the robot appear here automatically.</p>
+      <p>To get one file with jobs and labels:<br><code>python labeling/label_app.py --export</code></p>
+      <p><button class="linkbtn" onclick="goTo(0,false)">Review from the start</button></p></div>`;
+    return;
+  }
+  bar.style.display = "";
+  const j = jobs[idx];
+  const cur = labels[j.job_id];
+  const curText = cur ? { "1": "relevant", "0": "not relevant", "?": "unsure" }[cur.label] : "";
+  const curCls = cur ? { "1": "l1", "0": "l0", "?": "lq" }[cur.label] : "";
+  if (cur) document.querySelector(`[data-label="${cur.label}"]`)?.classList.add("active");
+  const types = (j.employment_type || "").split(/[,;|]\s*/).filter(Boolean).map(t => TYPES[t] || t).join(", ");
+
+  card.innerHTML = `
+    <div class="meta">
+      <span class="tag">${esc(j.search_query)}</span>
+      <span>Job ${idx + 1} of ${jobs.length}</span>
+      ${j.location ? `<span>📍 ${esc(j.location)}</span>` : ""}
+      ${types ? `<span>${esc(types)}</span>` : ""}
+      ${j.date_posted ? `<span>posted ${esc(j.date_posted)}</span>` : ""}
+      <a href="${esc(j.url)}" target="_blank" rel="noopener">Open on karriere.at ↗</a>
+      ${cur ? `<span class="current ${curCls}">labeled: ${curText}${cur.note ? " - " + esc(cur.note) : ""}</span>` : ""}
+    </div>
+    <div class="title">${highlight(j.title)}</div>
+    <div class="company">${esc(j.company)}</div>
+    <div class="legend">
+      <span><mark class="sen">senior / years</mark></span><span><mark class="jun">junior / entry</mark></span>
+      <span><mark class="con">internship / part-time</mark></span><span><mark class="skl">skills</mark></span>
+      <span><mark class="sal">salary</mark></span>
+    </div>
+    <div class="desc">${highlight(j.description)}</div>`;
+  note.value = cur ? (cur.note || "") : "";
+}
+
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+// ---------------------------------------------------------------- criteria drawer (labeling/criteria.md)
+function renderMarkdown(md) {
+  let html = "", inList = false;
+  for (const raw of md.split("\n")) {
+    const line = raw.trim();
+    const item = line.match(/^[-*]\s+(.*)/);
+    if (inList && !item) { html += "</ul>"; inList = false; }
+    if (/^#+\s/.test(line)) html += `<h2>${esc(line.replace(/^#+\s*/, ""))}</h2>`;
+    else if (item) { if (!inList) { html += "<ul>"; inList = true; } html += `<li>${esc(item[1])}</li>`; }
+    else if (line) html += `<p>${esc(line)}</p>`;
+  }
+  return (html + (inList ? "</ul>" : "")).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+}
+
+// ---------------------------------------------------------------- events
+document.querySelectorAll("[data-label]").forEach(b =>
+  b.addEventListener("click", () => saveLabel(b.dataset.label, document.getElementById("note").value)));
+document.querySelectorAll("[data-reason]").forEach(b =>
+  b.addEventListener("click", () => {
+    const extra = document.getElementById("note").value.trim();
+    saveLabel("0", b.dataset.reason + (extra && extra !== b.dataset.reason ? "; " + extra : ""));
+  }));
+document.getElementById("back").addEventListener("click", back);
+document.getElementById("skip").addEventListener("click", skip);
+document.getElementById("criteria-btn").addEventListener("click", () =>
+  document.getElementById("drawer").classList.toggle("open"));
+
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT") {           // typing a note: Enter leaves the field
+    if (e.key === "Enter" || e.key === "Escape") e.target.blur();
+    return;
+  }
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (k === "1") saveLabel("1", document.getElementById("note").value);
+  else if (k === "0") saveLabel("0", document.getElementById("note").value);
+  else if (k === "u" || k === "?") saveLabel("?", document.getElementById("note").value);
+  else if (k === "arrowleft" || k === "backspace") { e.preventDefault(); back(); }
+  else if (k === "arrowright") skip();
+  else if (k === "n") { e.preventDefault(); document.getElementById("note").focus(); }
+  else return;
+});
+
+// new jobs from a running robot appear without reloading the page
+setInterval(async () => {
+  try {
+    const data = await fetchJobs();
+    const added = data.jobs.length - jobs.length;
+    if (added === 0) return;
+    apply(data);
+    render();
+    if (added > 0) toast(`${added} new jobs from the robot`);
+  } catch (e) { /* server stopped - the next label click shows an error */ }
+}, 20000);
+
+(async () => {
+  apply(await fetchJobs());
+  render();
+  const c = await (await fetch("/api/criteria")).json();
+  if (c.text) document.getElementById("criteria").innerHTML = renderMarkdown(c.text);
+})();
+</script>
+</body>
+</html>

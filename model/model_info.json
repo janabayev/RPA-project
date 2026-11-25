@@ -1,0 +1,13 @@
+{
+  "input": "job title, lowercased",
+  "token_pattern": "\\b[a-zA-ZäöüÄÖÜß]{3,}\\b",
+  "vocabulary_file": "vocabulary.csv (column order = row order of W1.csv)",
+  "layers": [
+    "W1.csv + b1.csv, relu",
+    "W2.csv + b2.csv, relu",
+    "W3.csv + b3.csv, sigmoid"
+  ],
+  "threshold": 0.5,
+  "trained_on_jobs": 300,
+  "sklearn_model": "MLPClassifier(hidden_layer_sizes=(100, 10), max_iter=100, random_state=1)"
+}
